@@ -27,4 +27,26 @@ public class FileService : IFileService
         
         return new RsaEncryptionResult { N = n, E = e, CipherText = ciphertext };
     }
+
+    public void SaveWrapper(string filePath, RsaEncryptionResultWrapper data)
+    {
+        // save in format of: encryptedText|p|q
+        string line = $"{data.EncryptedText}|{data.P}|{data.Q}";
+        File.WriteAllText(filePath, line);
+    }
+
+    public RsaEncryptionResultWrapper ReadWrapper(string filePath)
+    {
+        string line = File.ReadAllText(filePath);
+        var parts = line.Split('|');
+        if (parts.Length < 3)
+        {
+            throw new Exception("Invalid file format for text wrapper!");
+        }
+        
+        string encryptedText = parts[0];
+        int p = int.Parse(parts[1]);
+        int q = int.Parse(parts[2]);
+        return new RsaEncryptionResultWrapper { EncryptedText = encryptedText, P = p, Q = q };
+    }
 }
