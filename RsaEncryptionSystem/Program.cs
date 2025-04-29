@@ -23,15 +23,18 @@ namespace RsaEncryptionSystem
                 // encryption mode
                 Console.Write("Enter p: ");
                 int p = int.Parse(Console.ReadLine());
-                
+
                 Console.Write("Enter q: ");
                 int q = int.Parse(Console.ReadLine());
-                
+
                 Console.Write("Enter plaintext: ");
                 string plaintext = Console.ReadLine();
 
-                // encrypt text character by character
-                string encryptedText = EncryptText(rsaService, p, q, plaintext);
+                // find public parameters one time
+                var (n, e) = rsaService.GetPublicKeyParameters(p, q);
+
+                // encrypt text character by character with using specific e
+                string encryptedText = EncryptText(rsaService, n, e, plaintext);
                 Console.WriteLine("\nEncrypted Text:");
                 Console.WriteLine(encryptedText);
 
@@ -40,11 +43,11 @@ namespace RsaEncryptionSystem
                 string filePath = Console.ReadLine();
                 try
                 {
-                    RsaEncryptionResultWrapper wrapper = new RsaEncryptionResultWrapper
+                    var wrapper = new RsaEncryptionResultWrapper
                     {
                         EncryptedText = encryptedText,
-                        P = p,
-                        Q = q
+                        N = n,
+                        E = e
                     };
                     fileService.SaveWrapper(filePath, wrapper);
                     Console.WriteLine("Data successfully saved to file: " + filePath);
@@ -71,10 +74,8 @@ namespace RsaEncryptionSystem
                 }
 
                 string encryptedText = wrapper.EncryptedText;
-                int p = wrapper.P;
-                int q = wrapper.Q;
 
-                string decryptedText = DecryptText(rsaService, p, q, encryptedText);
+                string decryptedText = DecryptText(rsaService, wrapper.N, wrapper.E, encryptedText);
                 Console.WriteLine("\nDecrypted Text:");
                 Console.WriteLine(decryptedText);
             }
@@ -85,57 +86,32 @@ namespace RsaEncryptionSystem
         }
 
         // encrypts text character by character: each character is converted to its numeric code and encrypted with RSA
-        static string EncryptText(IRsaEncryptionService rsaService, int p, int q, string plaintext)
+        static string EncryptText(IRsaEncryptionService rsaService, int n, int e, string plaintext)
         {
             var parts = new System.Collections.Generic.List<string>();
             // convert a character to a number (its Unicode code, which is the same as ASCII for standard Latin characters)
             foreach (char c in plaintext)
             {
                 int num = (int)c;
-                RsaEncryptionResult result = rsaService.Encrypt(p, q, num);
+                RsaEncryptionResult result = rsaService.EncryptWithKey(n, e, num);
                 parts.Add(result.CipherText.ToString());
             }
             return string.Join(" ", parts);
         }
 
         // decrypts text: splits the string on spaces, decrypts each number and collects symbols
-        static string DecryptText(IRsaEncryptionService rsaService, int p, int q, string encryptedText)
+        static string DecryptText(IRsaEncryptionService rsaService, int n, int e, string encryptedText)
         {
-            int n = p * q;
-            int e = GetE(p, q);
             var parts = encryptedText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             string decrypted = "";
             foreach (var part in parts)
             {
                 int cipher = int.Parse(part);
-                RsaEncryptionResult result = new RsaEncryptionResult { N = n, E = e, CipherText = cipher };
+                var result = new RsaEncryptionResult { N = n, E = e, CipherText = cipher };
                 int decryptedNumber = rsaService.Decrypt(result);
                 decrypted += (char)decryptedNumber;
             }
             return decrypted;
-        }
-
-        // function for defining public exponent e
-        static int GetE(int p, int q)
-        {
-            int phi = (p - 1) * (q - 1);
-            for (int e = 2; e < phi; e++)
-            {
-                if (Gcd(e, phi) == 1)
-                    return e;
-            }
-            throw new Exception("Unable to determine public exponent e.");
-        }
-
-        static int Gcd(int a, int b)
-        {
-            while (b != 0)
-            {
-                int temp = b;
-                b = a % b;
-                a = temp;
-            }
-            return a;
         }
     }
 }

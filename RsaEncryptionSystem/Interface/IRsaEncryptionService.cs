@@ -4,6 +4,8 @@ namespace RsaEncryptionSystem.Interface;
 
 public interface IRsaEncryptionService
 {
-    RsaEncryptionResult Encrypt(int p, int q, int plaintext);
+    // find public key (n, e) for p and q
+    (int n, int e) GetPublicKeyParameters(int p, int q);
+    RsaEncryptionResult EncryptWithKey(int n, int e, int plaintext);
     int Decrypt(RsaEncryptionResult result);
 }

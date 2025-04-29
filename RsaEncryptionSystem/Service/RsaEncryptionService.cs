@@ -5,14 +5,20 @@ namespace RsaEncryptionSystem.Service;
 
 public class RsaEncryptionService : IRsaEncryptionService
 {
-    public RsaEncryptionResult Encrypt(int p, int q, int plaintext)
+    public (int n, int e) GetPublicKeyParameters(int p, int q)
     {
         int n = p * q;
         int phi = (p - 1) * (q - 1);
-        int e = ChooseE(phi); // choose a public exponent e such that gcd(e, phi) == 1
+        int e = ChooseE(phi);
 
-        int ciphertext = ModExp(plaintext, e, n);
-        return new RsaEncryptionResult { N = n, E = e, CipherText = ciphertext};
+        return (n, e);
+    }
+    
+    public RsaEncryptionResult EncryptWithKey(int n, int e, int plaintext)
+    {
+        int cipherText = ModExp(plaintext, e, n);
+
+        return new RsaEncryptionResult { N = n, E = e, CipherText = cipherText };
     }
 
     public int Decrypt(RsaEncryptionResult result)
